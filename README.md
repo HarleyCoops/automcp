@@ -1,5 +1,7 @@
 # AutoMCP CLI
 
+![AutoMCP Logo](assets/autoMCP_logo.svg)
+
 AutoMCP is a lightweight Node.js CLI that:
 
 1. Uses the [`mcp/fetch`](https://hub.docker.com/r/mcp/fetch) MCP server (via Docker) to pull API documentation.
@@ -25,7 +27,7 @@ Optional environment variables:
 ```
 # LLM provider selection
 LLM_PROVIDER=openai        # or groq
-LLM_MODEL=gpt-4o-mini      # optional override
+LLM_MODEL=gpt-4o-mini      # optional override (MODEL also accepted)
 
 # API keys (provide whichever provider you choose)
 OPENAI_API_KEY=sk-...
@@ -115,6 +117,7 @@ The web UI will be available at `http://localhost:3000` (or the port specified b
    - Generated file locations
    - Build logs
    - Next steps for testing
+6. Download the ZIP artifact via the provided button (available even if validation/build fails)
 
 The web UI provides a user-friendly interface for generating MCP servers without needing to use the command line.
 
@@ -166,6 +169,7 @@ Artifacts are saved under `output/<slug>/` (e.g., `output/jsonplaceholder`). Tha
 2. **LLM Planner (`src/lib/llm.ts`)**
 
    - Sends the docs, API name, and base URL to your chosen LLM provider (OpenAI by default, Groq optional).
+   - Respects `LLM_MODEL` (or `MODEL`) so you can pick any supported model; defaults are `gpt-4o-mini` (OpenAI) and `llama-3.1-70b-instant` (Groq).
    - The model returns JSON describing endpoints, optional extra files, and shell commands.
    - Ensures `npm install` and `npm run build` are always included.
 
@@ -242,6 +246,16 @@ fly deploy
 Fly will build using the included Dockerfile, expose the Express server, and serve the static UI from `public/`. You can share the Fly-issued URL so others can submit jobs and download their generated MCP projects from the returned JSON (`localPath` is relative inside the container—consider wiring S3, Fly volumes, or a download endpoint if you need persistent artifacts).
 
 ---
+
+## Downloading Artifacts
+
+Every run creates (or updates) a folder under `output/<slug>` where `<slug>` is derived from the API name. The web UI exposes a download button that hits:
+
+```
+GET /download/:id
+```
+
+Where `:id` is the slug/`downloadId` returned by the API. The endpoint streams a ZIP of the latest files—even if the build failed—so you can inspect partial outputs or share artifacts with teammates.
 
 ## Project Structure
 
