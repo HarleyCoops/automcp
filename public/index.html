@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoMCP - Generate MCP Servers</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    .content {
+      padding: 2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    input[type="text"],
+    input[type="url"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus,
+    input[type="url"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .help-text {
+      font-size: 0.85rem;
+      color: #888;
+      margin-top: 0.25rem;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.info {
+      background: #e3f2fd;
+      color: #1976d2;
+      border-left: 4px solid #1976d2;
+    }
+
+    .status.success {
+      background: #e8f5e9;
+      color: #388e3c;
+      border-left: 4px solid #388e3c;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #c62828;
+    }
+
+    .status.warning {
+      background: #fff3e0;
+      color: #f57c00;
+      border-left: 4px solid #f57c00;
+    }
+
+    .status-content {
+      white-space: pre-wrap;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .result {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background: #f5f5f5;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .result-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .result-section h3 {
+      color: #667eea;
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+
+    .result-section p,
+    .result-section ul {
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .result-section ul {
+      margin-left: 1.5rem;
+    }
+
+    .result-section code {
+      background: #e0e0e0;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .file-list {
+      list-style: none;
+      margin-left: 0;
+    }
+
+    .file-list li {
+      padding: 0.5rem;
+      background: white;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      border-left: 3px solid #667eea;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .example {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .example h4 {
+      color: #667eea;
+      margin-bottom: 0.5rem;
+    }
+
+    .example code {
+      display: block;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .progress-container {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .progress-steps {
+      margin-bottom: 1.5rem;
+    }
+
+    .step-item {
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .step-item.active {
+      border-left-color: #4caf50;
+      background: #e8f5e9;
+    }
+
+    .step-item.error {
+      border-left-color: #f44336;
+      background: #ffebee;
+    }
+
+    .step-icon {
+      font-size: 1.2rem;
+    }
+
+    .progress-logs {
+      max-height: 400px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1rem;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .log-entry {
+      margin-bottom: 0.5rem;
+      padding: 0.25rem 0;
+    }
+
+    .log-entry.info {
+      color: #4fc3f7;
+    }
+
+    .log-entry.warn {
+      color: #ffb74d;
+    }
+
+    .log-entry.error {
+      color: #e57373;
+    }
+
+    .log-entry.success {
+      color: #81c784;
+    }
+
+    .log-entry::before {
+      content: '> ';
+      opacity: 0.5;
+    }
+
+    .command-block {
+      margin: 0.75rem 0;
+      padding: 0.75rem;
+      background: #2d2d2d;
+      border-radius: 4px;
+      border-left: 3px solid #667eea;
+    }
+
+    .command-block.error {
+      border-left-color: #f44336;
+    }
+
+    .command-block.success {
+      border-left-color: #4caf50;
+    }
+
+    .command-header {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    .command-output {
+      color: #a8a8a8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .build-iteration {
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      background: #2d2d2d;
+      border-radius: 4px;
+      border-left: 3px solid #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 AutoMCP</h1>
+      <p>Generate MCP servers from API documentation</p>
+    </div>
+
+    <div class="content">
+      <form id="generateForm">
+        <div class="form-group">
+          <label for="apiName">API Name</label>
+          <input type="text" id="apiName" name="apiName" placeholder="e.g., JSONPlaceholder" required>
+          <div class="help-text">A friendly name for your API</div>
+        </div>
+
+        <div class="form-group">
+          <label for="baseUrl">Base URL</label>
+          <input type="url" id="baseUrl" name="baseUrl" placeholder="https://api.example.com" required>
+          <div class="help-text">The base URL of the API</div>
+        </div>
+
+        <div class="form-group">
+          <label for="docs">Documentation URL</label>
+          <input type="url" id="docs" name="docs" placeholder="https://api.example.com/docs" required>
+          <div class="help-text">URL to the API documentation</div>
+        </div>
+
+        <div class="form-group">
+          <label for="maxIterations">Max Attempts</label>
+          <input type="number" id="maxIterations" name="maxIterations" min="1" max="10" value="3">
+          <div class="help-text">How many build/validation attempts to try (default 3)</div>
+        </div>
+
+        <div class="example">
+          <h4>Example:</h4>
+          <code>
+            API Name: JSONPlaceholder<br>
+            Base URL: https://jsonplaceholder.typicode.com<br>
+            Documentation URL: https://jsonplaceholder.typicode.com/
+          </code>
+        </div>
+
+        <button type="submit" class="btn" id="generateBtn">
+          Generate MCP Server
+        </button>
+      </form>
+
+      <div id="status" class="status"></div>
+
+      <div id="progress" class="progress-container" style="display: none;">
+        <h3 style="margin-bottom: 1rem; color: #667eea;">📊 Progress</h3>
+        <div id="progressSteps" class="progress-steps"></div>
+        <div id="progressLogs" class="progress-logs"></div>
+      </div>
+
+      <div id="result" class="result"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('generateForm');
+    const statusDiv = document.getElementById('status');
+    const resultDiv = document.getElementById('result');
+    const progressDiv = document.getElementById('progress');
+    const progressStepsDiv = document.getElementById('progressSteps');
+    const progressLogsDiv = document.getElementById('progressLogs');
+    const generateBtn = document.getElementById('generateBtn');
+
+    let currentSteps = [];
+    let eventSource = null;
+
+    function showStatus(message, type = 'info') {
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type} show`;
+      resultDiv.classList.remove('show');
+    }
+
+    function addStep(message, status = 'pending') {
+      const stepId = currentSteps.length;
+      currentSteps.push({ message, status });
+      updateStepsDisplay();
+    }
+
+    function updateStep(index, status) {
+      if (currentSteps[index]) {
+        currentSteps[index].status = status;
+        updateStepsDisplay();
+      }
+    }
+
+    function updateStepsDisplay() {
+      progressStepsDiv.innerHTML = currentSteps.map((step, index) => {
+        const icons = {
+          pending: '⏳',
+          active: '🔄',
+          success: '✅',
+          error: '❌',
+        };
+        const icon = icons[step.status] || '⏳';
+        return `
+          <div class="step-item ${step.status === 'active' ? 'active' : ''} ${step.status === 'error' ? 'error' : ''}">
+            <span class="step-icon">${icon}</span>
+            <span>${step.message}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addLog(message, level = 'info') {
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${level}`;
+      logEntry.textContent = message;
+      progressLogsDiv.appendChild(logEntry);
+      progressLogsDiv.scrollTop = progressLogsDiv.scrollHeight;
+    }
+
+    function addCommandLog(command, status, stdout, stderr, exitCode) {
+      const commandBlock = document.createElement('div');
+      commandBlock.className = `command-block ${status === 'error' ? 'error' : status === 'complete' && exitCode === 0 ? 'success' : ''}`;
+      
+      const header = document.createElement('div');
+      header.className = 'command-header';
+      header.textContent = `$ ${command} ${exitCode !== undefined ? `(exit code: ${exitCode})` : ''}`;
+      commandBlock.appendChild(header);
+
+      if (stdout) {
+        const output = document.createElement('div');
+        output.className = 'command-output';
+        output.textContent = stdout;
+        commandBlock.appendChild(output);
+      }
+
+      if (stderr) {
+        const error = document.createElement('div');
+        error.className = 'command-output';
+        error.style.color = '#e57373';
+        error.textContent = stderr;
+        commandBlock.appendChild(error);
+      }
+
+      progressLogsDiv.appendChild(commandBlock);
+      progressLogsDiv.scrollTop = progressLogsDiv.scrollHeight;
+    }
+
+    function showResult(data) {
+      const result = data.result;
+      resultDiv.innerHTML = `
+        <div class="result-section">
+          <h3>✅ Success!</h3>
+          <p>Your MCP server has been generated and built successfully.</p>
+        </div>
+
+        <div class="result-section">
+          <h3>📁 Project Location</h3>
+          <p><code>${result.localPath}</code></p>
+        </div>
+
+        <div class="result-section">
+          <h3>📋 Summary</h3>
+          <p>${result.summary || 'MCP server generated successfully'}</p>
+        </div>
+
+        <div class="result-section">
+          <h3>📄 Generated Files</h3>
+          <ul class="file-list">
+            ${result.filesWritten.map(file => `<li><code>${file}</code></li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="result-section">
+          <h3>🔧 Build Commands</h3>
+          <ul>
+            ${result.commands.map(cmd => `
+              <li>
+                <strong>${cmd.command}</strong> 
+                (exit code: ${cmd.exitCode}, duration: ${(cmd.durationMs / 1000).toFixed(2)}s)
+                ${cmd.stderr ? `<br><small style="color: #c62828;">${cmd.stderr.slice(0, 200)}</small>` : ''}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+
+        ${result.validation ? `
+        <div class="result-section">
+          <h3>✅ Server Validation</h3>
+          <p><strong>Status:</strong> ${result.validation.success ? '✅ Passed' : '⚠️ Issues Found'}</p>
+          <p><strong>Tools Found:</strong> ${result.validation.toolsFound}</p>
+          <p><strong>Tools Tested:</strong> ${result.validation.toolsTested}</p>
+          ${result.validation.details.toolTestResults.length > 0 ? `
+            <h4 style="margin-top: 1rem;">Tool Test Results:</h4>
+            <ul>
+              ${result.validation.details.toolTestResults.map(test => `
+                <li>
+                  <strong>${test.name}:</strong> 
+                  ${test.success ? '✅ Success' : `❌ Failed${test.error ? ` - ${test.error}` : ''}`}
+                </li>
+              `).join('')}
+            </ul>
+          ` : ''}
+          ${result.validation.errors.length > 0 ? `
+            <h4 style="margin-top: 1rem; color: #c62828;">Validation Errors:</h4>
+            <ul style="color: #c62828;">
+              ${result.validation.errors.map(err => `<li>${err}</li>`).join('')}
+            </ul>
+          ` : ''}
+        </div>
+        ` : ''}
+
+        <div class="result-section">
+          <h3>🚀 Next Steps</h3>
+          <p>To test your MCP server locally:</p>
+          <code style="display: block; margin-top: 0.5rem; padding: 0.5rem;">
+            cd ${result.localPath}<br>
+            npm install<br>
+            npm run build<br>
+            node test-mcp-server.mjs dist/server.js
+          </code>
+        </div>
+      `;
+      resultDiv.classList.add('show');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const maxIterationsValue = formData.get('maxIterations');
+      const data = {
+        apiName: formData.get('apiName'),
+        baseUrl: formData.get('baseUrl'),
+        docs: formData.get('docs'),
+        maxIterations: maxIterationsValue ? Number.parseInt(String(maxIterationsValue), 10) : undefined,
+      };
+
+      // Reset UI
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<span class="spinner"></span>Generating...';
+      currentSteps = [];
+      progressStepsDiv.innerHTML = '';
+      progressLogsDiv.innerHTML = '';
+      progressDiv.style.display = 'block';
+      resultDiv.classList.remove('show');
+      showStatus('Starting generation...', 'info');
+
+      // Close any existing event source
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      try {
+        // Use fetch with streaming for SSE
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const event = JSON.parse(line.slice(6));
+                handleProgressEvent(event);
+              } catch (err) {
+                console.error('Error parsing event:', err, line);
+              }
+            }
+          }
+        }
+
+        // Process remaining buffer
+        if (buffer.startsWith('data: ')) {
+          try {
+            const event = JSON.parse(buffer.slice(6));
+            handleProgressEvent(event);
+          } catch (err) {
+            console.error('Error parsing final event:', err);
+          }
+        }
+      } catch (error) {
+        showStatus(`❌ Network error: ${error.message}`, 'error');
+        addLog(`Network error: ${error.message}`, 'error');
+        console.error('Request failed:', error);
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Generate MCP Server';
+      }
+    });
+
+    function handleProgressEvent(event) {
+      switch (event.type) {
+        case 'step':
+          addStep(event.message, 'active');
+          addLog(event.message, 'info');
+          break;
+
+        case 'log':
+          addLog(event.message, event.level);
+          break;
+
+        case 'sandbox-command':
+          if (event.status === 'start') {
+            addLog(`Running: ${event.command}`, 'info');
+          } else {
+            addCommandLog(event.command, event.status, event.stdout, event.stderr, event.exitCode);
+            if (event.status === 'complete' && event.exitCode === 0) {
+              addLog(`✓ Command completed successfully`, 'success');
+            } else if (event.status === 'error' || event.exitCode !== 0) {
+              addLog(`✗ Command failed with exit code ${event.exitCode}`, 'error');
+            }
+          }
+          break;
+
+        case 'build-iteration':
+          if (event.status === 'start') {
+            addLog(`\n🔄 Build iteration ${event.iteration}/${event.maxIterations}`, 'info');
+          } else if (event.status === 'retry') {
+            addLog(`⚠️ Retrying build (attempt ${event.iteration}/${event.maxIterations})`, 'warn');
+          } else if (event.status === 'success') {
+            addLog(`✅ Build succeeded on attempt ${event.iteration}`, 'success');
+          } else if (event.status === 'failed') {
+            addLog(`❌ Build failed after ${event.maxIterations} attempts`, 'error');
+          }
+          break;
+
+        case 'result':
+          showStatus('✅ Generation completed successfully!', 'success');
+          showResult({ result: event.data });
+          break;
+
+        case 'error':
+          showStatus(`❌ Error: ${event.error}`, 'error');
+          addLog(`Error: ${event.error}`, 'error');
+          break;
+      }
+    }
+
+    // Check server health on load
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'ok') {
+          console.log('Server is ready');
+        }
+      })
+      .catch(err => {
+        console.error('Server health check failed:', err);
+        showStatus('⚠️ Could not connect to server. Make sure the server is running.', 'warning');
+      });
+  </script>
+</body>
+</html>
+
