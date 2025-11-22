@@ -60,6 +60,10 @@ async function main() {
       if (error.stack) {
         console.error(error.stack);
       }
+      const localPath = (error as any)?.localPath;
+      if (localPath) {
+        console.error(`[AutoMCP] Latest files saved to: ${localPath}`);
+      }
     } else {
       console.error('[AutoMCP] Failed with non-error value:', error);
     }

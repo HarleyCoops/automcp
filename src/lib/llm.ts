@@ -40,7 +40,8 @@ type LlmProvider = 'openai' | 'groq';
 const provider = (process.env.LLM_PROVIDER?.toLowerCase() as LlmProvider) ?? 'openai';
 const MODEL =
   process.env.LLM_MODEL ??
-  (provider === 'groq' ? 'llama-3.1-70b-versatile' : 'gpt-4o-mini');
+  process.env.MODEL ??
+  (provider === 'groq' ? 'llama-3.1-70b-instant' : 'gpt-4o-mini');
 
 let openaiClient: OpenAI | null = null;
 let groqClient: Groq | null = null;

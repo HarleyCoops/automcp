@@ -30,6 +30,7 @@ export interface AutoMcpResult {
   summary?: string;
   documentationSource: 'mcp-fetch' | 'http-fetch';
   localPath: string;
+  downloadId: string;
   validation?: {
     success: boolean;
     errors: string[];
@@ -42,6 +43,8 @@ export interface AutoMcpResult {
     };
   };
 }
+
+type AutoMcpError = Error & { localPath?: string; downloadId?: string };
 
 function slugify(value: string) {
   return value
@@ -107,10 +110,13 @@ export async function runAutoMcp(input: AutoMcpInput, onProgress?: ProgressCallb
   // Agentic loop: try building, fix errors, retry
   const MAX_ITERATIONS = Math.max(1, Math.min(input.maxIterations ?? 3, 10));
   let files: GeneratedFile[] = [];
+  let latestFiles: GeneratedFile[] | null = null;
+  let savedLocalPath: string | null = null;
   let build: Awaited<ReturnType<typeof runProjectInSandbox>> | null = null;
   let iteration = 0;
 
-  while (iteration < MAX_ITERATIONS) {
+  try {
+    while (iteration < MAX_ITERATIONS) {
     iteration++;
     onProgress?.({ type: 'build-iteration', iteration, maxIterations: MAX_ITERATIONS, status: iteration === 1 ? 'start' : 'retry' });
     onProgress?.({ type: 'log', level: 'info', message: `Build attempt ${iteration}/${MAX_ITERATIONS}` });
@@ -123,6 +129,7 @@ export async function runAutoMcp(input: AutoMcpInput, onProgress?: ProgressCallb
       const templatePaths = new Set(templateFiles.map(file => file.path.replace(/^\.?\//, '')));
       const additionalFiles = plan.files.filter(file => !templatePaths.has(file.path.replace(/^\.?\//, '')));
       files = [...templateFiles, ...additionalFiles];
+      latestFiles = files;
       onProgress?.({ type: 'log', level: 'info', message: `Generated ${files.length} files` });
     } else {
       // Subsequent attempts: apply fixes from LLM
@@ -159,6 +166,7 @@ export async function runAutoMcp(input: AutoMcpInput, onProgress?: ProgressCallb
           files.push(fixedFile);
         }
       }
+      latestFiles = files;
     }
 
     build = await runProjectInSandbox({
@@ -206,23 +214,40 @@ export async function runAutoMcp(input: AutoMcpInput, onProgress?: ProgressCallb
     }
   }
 
-  if (!build) {
-    throw new Error('Build never completed');
+    if (!build) {
+      throw new Error('Build never completed');
+    }
+
+    onProgress?.({ type: 'step', message: 'Saving generated project locally…' });
+    const localPath = await saveProjectLocally(slug, files);
+    savedLocalPath = localPath;
+    onProgress?.({ type: 'log', level: 'info', message: `Project files saved to ${localPath}` });
+    onProgress?.({ type: 'step', message: '✅ Generation completed successfully!' });
+
+    return {
+      sandboxId: build.sandboxId,
+      projectDir: build.projectDir,
+      filesWritten: build.filesWritten,
+      commands: build.commands,
+      summary: plan.summary,
+      documentationSource: source,
+      localPath,
+      downloadId: slug,
+      validation: build.validation,
+    };
+  } catch (error) {
+    if (!savedLocalPath && latestFiles && latestFiles.length) {
+      try {
+        savedLocalPath = await saveProjectLocally(slug, latestFiles);
+      } catch (saveError) {
+        console.warn('[AutoMCP] Failed to save partial project locally:', (saveError as Error).message);
+      }
+    }
+    const enriched = error as AutoMcpError;
+    if (savedLocalPath) {
+      enriched.localPath = savedLocalPath;
+    }
+    enriched.downloadId = slug;
+    throw enriched;
   }
-
-  onProgress?.({ type: 'step', message: 'Saving generated project locally…' });
-  const localPath = await saveProjectLocally(slug, files);
-  onProgress?.({ type: 'log', level: 'info', message: `Project files saved to ${localPath}` });
-  onProgress?.({ type: 'step', message: '✅ Generation completed successfully!' });
-
-  return {
-    sandboxId: build.sandboxId,
-    projectDir: build.projectDir,
-    filesWritten: build.filesWritten,
-    commands: build.commands,
-    summary: plan.summary,
-    documentationSource: source,
-    localPath,
-    validation: build.validation,
-  };
 }

@@ -244,6 +244,36 @@
       font-size: 0.85rem;
     }
 
+    .download-section {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #eef2ff;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      display: none;
+    }
+
+    .download-link {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #667eea;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .download-link:hover {
+      background: #5a67d8;
+    }
+
+    .download-hint {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: #555;
+    }
+
     .progress-container {
       margin-top: 1.5rem;
       padding: 1.5rem;
@@ -413,6 +443,12 @@
         <div id="progressLogs" class="progress-logs"></div>
       </div>
 
+      <div id="downloadSection" class="download-section">
+        <strong>Download generated files (zip)</strong>
+        <a id="downloadLink" class="download-link" href="#" target="_blank" rel="noopener">Download ZIP</a>
+        <p id="downloadHint" class="download-hint"></p>
+      </div>
+
       <div id="result" class="result"></div>
     </div>
   </div>
@@ -424,6 +460,9 @@
     const progressDiv = document.getElementById('progress');
     const progressStepsDiv = document.getElementById('progressSteps');
     const progressLogsDiv = document.getElementById('progressLogs');
+    const downloadSection = document.getElementById('downloadSection');
+    const downloadLinkEl = document.getElementById('downloadLink');
+    const downloadHintEl = document.getElementById('downloadHint');
     const generateBtn = document.getElementById('generateBtn');
 
     let currentSteps = [];
@@ -578,6 +617,23 @@
         </div>
       `;
       resultDiv.classList.add('show');
+      showDownloadLink(result.downloadId, 'Download the latest successful build (zip).');
+    }
+
+    function showDownloadLink(downloadId, hint) {
+      if (!downloadId) {
+        hideDownloadLink();
+        return;
+      }
+      downloadSection.style.display = 'block';
+      downloadLinkEl.href = `/download/${downloadId}?t=${Date.now()}`;
+      downloadHintEl.textContent = hint || 'Includes generated files even if validation failed.';
+    }
+
+    function hideDownloadLink() {
+      downloadSection.style.display = 'none';
+      downloadLinkEl.href = '#';
+      downloadHintEl.textContent = '';
     }
 
     form.addEventListener('submit', async (e) => {
@@ -600,6 +656,7 @@
       progressLogsDiv.innerHTML = '';
       progressDiv.style.display = 'block';
       resultDiv.classList.remove('show');
+      hideDownloadLink();
       showStatus('Starting generation...', 'info');
 
       // Close any existing event source
@@ -708,6 +765,9 @@
         case 'error':
           showStatus(`❌ Error: ${event.error}`, 'error');
           addLog(`Error: ${event.error}`, 'error');
+          if (event.downloadId) {
+            showDownloadLink(event.downloadId, 'Download the latest files snapshot (may include partial results).');
+          }
           break;
       }
     }
